@@ -1,95 +1,95 @@
 import requests
 import re
-from utils.db import get_schema
 
 OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL = "llama3"
 
 
-def clean_sql(response):
+def clean_sql(response, table_name, columns):
     response = response.replace("```sql", "").replace("```", "").strip()
 
-    # Extract SQL only
     match = re.search(r"(SELECT .*?;)", response, re.IGNORECASE | re.DOTALL)
+    sql = match.group(1).strip() if match else response.strip()
 
-    if match:
-        sql = match.group(1).strip()
-    else:
-        sql = response.strip()
+    # ✅ Fix EXTRACT → SQLite
+    sql = re.sub(
+        r"EXTRACT\s*\(\s*YEAR\s+FROM\s+(\w+)\)",
+        r"strftime('%Y', \1)",
+        sql,
+        flags=re.IGNORECASE
+    )
 
-    # ✅ Fix column names
-    sql = sql.replace("Order_Date", "order_date")
-    sql = sql.replace("Order Date", "order_date")
-    sql = sql.replace("Sales", "sales")
-    sql = sql.replace("Profit", "profit")
-    sql = sql.replace("Category", "category")
-    sql = sql.replace("Region", "region")
+    # ✅ Normalize column names (CRITICAL FIX)
+    for col in columns:
+        sql = re.sub(rf"\b{col}\b", col, sql, flags=re.IGNORECASE)
 
     # ✅ Force correct table name
-    sql = re.sub(r"\bFROM\s+\w+", "FROM sales", sql, flags=re.IGNORECASE)
-    sql = re.sub(r"\bJOIN\s+\w+", "JOIN sales", sql, flags=re.IGNORECASE)
+    sql = re.sub(r"\bFROM\s+\w+", f"FROM {table_name}", sql, flags=re.IGNORECASE)
+    sql = re.sub(r"\bJOIN\s+\w+", f"JOIN {table_name}", sql, flags=re.IGNORECASE)
 
     return sql
 
 
-def generate_sql(question):
-    columns = get_schema()
+def rewrite_question(question, history):
+    context = "\n".join([m["content"] for m in history[-3:]])
 
     prompt = f"""
-You are an expert data analyst.
+Rewrite the user question into a clear standalone question.
 
-Convert the question into a valid SQLite SQL query.
+Conversation:
+{context}
 
-STRICT RULES:
-- Output ONLY SQL
-- DO NOT explain anything
-- SQL must start with SELECT
-- SQL must end with ;
-- ONLY use table name: sales
-- DO NOT use any other table name
-- Use lowercase column names
+User question:
+{question}
 
-Table: sales
-Columns: {', '.join(columns)}
-
-IMPORTANT:
-- Always use: FROM sales
-- NEVER use sales_data or any other name
-- For date use: strftime('%Y', order_date)
-
-Examples:
-Q: Total sales
-A: SELECT SUM(sales) FROM sales;
-
-Q: Profit by category
-A: SELECT category, SUM(profit) FROM sales GROUP BY category;
-
-Q: Yearly sales
-A: SELECT strftime('%Y', order_date), SUM(sales) FROM sales GROUP BY strftime('%Y', order_date);
-
-Now:
-Q: {question}
-A:
+Return only the rewritten question.
 """
 
     response = requests.post(
         OLLAMA_URL,
-        json={
-            "model": MODEL,
-            "prompt": prompt,
-            "stream": False
-        },
+        json={"model": MODEL, "prompt": prompt, "stream": False},
         timeout=30
     )
 
-    return clean_sql(response.json()['response'])
+    return response.json()['response'].strip()
 
 
-def fix_sql(bad_sql, error):
-    columns = get_schema()
-
+def generate_sql(question, table_name, columns):
     prompt = f"""
-Fix this SQL query:
+You are an expert data analyst using SQLite.
+
+Convert the question into SQL.
+
+STRICT RULES:
+- Output ONLY SQL
+- Use ONLY table: {table_name}
+- Use ONLY columns: {', '.join(columns)}
+- Column names are case-sensitive
+- Use EXACT column names
+- SQL must start with SELECT and end with ;
+
+SQL RULES:
+- Use strftime('%Y', column_name) for year
+- DO NOT use EXTRACT()
+
+Question:
+{question}
+
+SQL:
+"""
+
+    response = requests.post(
+        OLLAMA_URL,
+        json={"model": MODEL, "prompt": prompt, "stream": False},
+        timeout=30
+    )
+
+    return clean_sql(response.json()['response'], table_name, columns)
+
+
+def fix_sql(bad_sql, error, table_name, columns):
+    prompt = f"""
+Fix this SQL for SQLite:
 
 {bad_sql}
 
@@ -97,42 +97,33 @@ Error:
 {error}
 
 STRICT RULES:
+- Use SQLite syntax only
+- Use EXACT column names
 - Return ONLY SQL
-- Must use table: sales
-- Use lowercase column names
-- Must start with SELECT and end with ;
 
-Table: sales
+Table: {table_name}
 Columns: {', '.join(columns)}
 """
 
     response = requests.post(
         OLLAMA_URL,
-        json={
-            "model": MODEL,
-            "prompt": prompt,
-            "stream": False
-        },
+        json={"model": MODEL, "prompt": prompt, "stream": False},
         timeout=30
     )
 
-    return clean_sql(response.json()['response'])
+    return clean_sql(response.json()['response'], table_name, columns)
 
 
 def generate_insight(df):
     prompt = f"""
-Give 2 short business insights from this data:
+Analyze the data and give 2 concise business insights:
 
-{df.to_string()}
+{df.head(20).to_string()}
 """
 
     response = requests.post(
         OLLAMA_URL,
-        json={
-            "model": MODEL,
-            "prompt": prompt,
-            "stream": False
-        },
+        json={"model": MODEL, "prompt": prompt, "stream": False},
         timeout=30
     )
 
