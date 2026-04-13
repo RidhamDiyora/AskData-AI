@@ -7,27 +7,26 @@ def plot_chart(df):
         st.info("No data to visualize")
         return
 
-    # Get numeric columns
+    # 🔥 LIMIT rows (IMPORTANT)
+    if len(df) > 50:
+        st.warning("⚠️ Large dataset detected, showing top 50 rows for visualization")
+        df = df.head(50)
+
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
 
     if len(numeric_cols) == 0:
         st.info("No numeric columns available for chart")
         return
 
-    # Safe column selection
     try:
         x_col = df.columns[0]
-
-        # Pick first numeric column safely
         y_col = numeric_cols[0]
 
         if y_col not in df.columns:
-            st.warning("Column mismatch, skipping chart")
             return
 
         plt.figure()
 
-        # Smart chart selection
         if "date" in x_col.lower() or "year" in x_col.lower():
             df.plot(kind='line', x=x_col, y=y_col)
         else:
@@ -37,4 +36,4 @@ def plot_chart(df):
         st.pyplot(plt)
 
     except Exception as e:
-        st.warning(f"⚠️ Chart skipped: {str(e)}")
+        st.warning(f"Chart skipped: {str(e)}")
