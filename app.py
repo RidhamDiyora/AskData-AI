@@ -109,11 +109,11 @@ if uploaded_file:
 
         if is_safe_query(sql):
             try:
-                df = run_query(sql)
+                df = run_query(sql, table_name, columns)
             except Exception as e:
                 st.warning("⚠️ Fixing query...")
                 sql = fix_sql(sql, str(e), table_name, columns)
-                df = run_query(sql)
+                df = run_query(sql, table_name, columns)
 
             # 💬 Assistant output
             with st.chat_message("assistant"):
