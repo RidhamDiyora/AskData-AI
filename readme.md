@@ -1,94 +1,122 @@
 # 🤖 AskData AI
 
-**AskData AI** is an AI-powered data analyst that converts natural language questions into SQL queries using a local LLM and generates insights with visualizations — all running locally with no API cost.
+Ask questions about your dataset in natural language and get instant insights, SQL queries, and visualizations.
 
 ---
 
-## 🚀 Features
+## 🚀 Live Demo
 
-* 🧠 Natural Language → SQL (LLM-powered)
-* 📊 Automatic Data Visualization
-* 🔍 AI-generated Business Insights
-* 🛡️ SQL Validation & Safety Layer
-* 🔁 Auto Error Correction (fixes broken queries)
-* 💻 Fully local (powered by Ollama + Llama3)
+👉 https://askdata-ai-5m2f4npzeh9kw7kq23hupk.streamlit.app/
+
+---
+
+## 💡 Overview
+
+**AskData AI** is an AI-powered data analysis tool that allows users to:
+
+* Upload any CSV dataset 📂
+* Ask questions in plain English 💬
+* Automatically generate SQL queries 🧠
+* Visualize results with charts 📊
+* Get AI-generated insights 💡
+
+---
+
+## ✨ Features
+
+* 🔍 Natural Language → SQL conversion
+* 🧠 AI-powered query correction (self-healing SQL)
+* 📊 Automatic chart generation
+* 💡 Smart insights generation
+* 📂 Works with any uploaded dataset
+* ⚡ Fast inference using Groq LLM
+* 🛡 Handles large datasets with aggregation
+
+---
+
+## 🧠 How It Works
+
+1. Upload a dataset (CSV)
+2. Ask a question (e.g., "students by gender")
+3. AI converts it into SQL
+4. Query runs on SQLite
+5. Results + chart + insights are displayed
 
 ---
 
 ## 🛠 Tech Stack
 
-* Python
-* Streamlit
-* SQLite
-* Ollama (Llama3)
-* Pandas
-* Matplotlib
-
----
-## 📁 Project Structure
-
-```
-askdata-ai/
-│── app.py
-│── load_data.py
-│── requirements.txt
-│── README.md
-│── db/
-│── data/
-│── utils/
-```
+* **Frontend:** Streamlit
+* **Backend:** Python
+* **Database:** SQLite
+* **LLM:** Groq (LLaMA 3)
+* **Visualization:** Matplotlib / Pandas
 
 ---
 
-## ▶️ Run Locally
+## ⚠️ Disclaimer
+
+This is an AI-powered prototype.
+Results may not always be accurate — please verify important insights.
+
+---
+
+## 🧪 Example Questions
+
+* "Total students"
+* "Students by gender"
+* "Average usage hours"
+* "Top 5 categories"
+
+---
+
+## 📦 Installation
 
 ```bash
-# 1. Create virtual environment
+git clone https://github.com/YOUR_USERNAME/askdata-ai.git
+cd askdata-ai
+
 python3 -m venv venv
 source venv/bin/activate
 
-# 2. Install dependencies
 pip install -r requirements.txt
+```
 
-# 3. Start local LLM
-ollama serve
-ollama pull llama3
+---
 
-# 4. Load dataset
-python load_data.py
+## 🔑 Setup
 
-# 5. Run app
+Create a `.env` or add Streamlit secrets:
+
+```
+GROQ_API_KEY=your_api_key
+```
+
+---
+
+## ▶️ Run App
+
+```bash
 streamlit run app.py
 ```
 
 ---
 
-## 💡 Example Queries
-
-* Total sales by region
-* Monthly sales trend
-* Least profitable category
-* Yearly profit analysis
-* Highest sales product
-
----
-
-## 🧠 Key Highlights
-
-* Built a full-stack AI application using a local LLM
-* Implemented natural language to SQL conversion pipeline
-* Designed SQL validation and auto-correction system
-* Handled LLM limitations with schema enforcement and cleaning
-* Created dynamic visualization layer for insights
-
----
-
-## 💼 Why This Project Matters
+## 💼 Why This Project?
 
 This project demonstrates:
 
-* Real-world LLM integration
-* Strong SQL and data analysis skills
-* Handling of unreliable AI outputs (production mindset)
-* End-to-end application development
+* LLM integration with real-world data
+* Prompt engineering & error handling
+* SQL generation + correction
+* End-to-end data pipeline
+* Deployment-ready AI application
 
+---
+
+## 🚀 Future Improvements
+
+* Multi-dataset support
+* Dashboard builder
+* Export insights (PDF/CSV)
+* User authentication
