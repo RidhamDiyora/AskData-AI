@@ -1,35 +1,39 @@
-import requests
 import re
+import os
+from groq import Groq
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "llama3"
+# 🔥 Initialize Groq client
+client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
+# ✅ Clean SQL (fix columns + enforce table)
 def clean_sql(response, table_name, columns):
-    response = response.replace("```sql", "").replace("```", "").strip()
+    response = response.strip()
 
     match = re.search(r"(SELECT .*?;)", response, re.IGNORECASE | re.DOTALL)
     sql = match.group(1).strip() if match else response.strip()
 
-    # ✅ Fix EXTRACT → SQLite
-    sql = re.sub(
-        r"EXTRACT\s*\(\s*YEAR\s+FROM\s+(\w+)\)",
-        r"strftime('%Y', \1)",
-        sql,
-        flags=re.IGNORECASE
-    )
-
-    # ✅ Normalize column names (CRITICAL FIX)
+    # Normalize column names (case fix)
     for col in columns:
         sql = re.sub(rf"\b{col}\b", col, sql, flags=re.IGNORECASE)
 
-    # ✅ Force correct table name
+    # Force correct table name
     sql = re.sub(r"\bFROM\s+\w+", f"FROM {table_name}", sql, flags=re.IGNORECASE)
     sql = re.sub(r"\bJOIN\s+\w+", f"JOIN {table_name}", sql, flags=re.IGNORECASE)
 
     return sql
 
 
+# 🔥 Generic LLM call
+def ask_llm(prompt):
+    response = client.chat.completions.create(
+        model="llama3-70b-8192",  # fast + powerful
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content
+
+
+# 🧠 Rewrite vague questions (context-aware)
 def rewrite_question(question, history):
     context = "\n".join([m["content"] for m in history[-3:]])
 
@@ -45,15 +49,10 @@ User question:
 Return only the rewritten question.
 """
 
-    response = requests.post(
-        OLLAMA_URL,
-        json={"model": MODEL, "prompt": prompt, "stream": False},
-        timeout=30
-    )
-
-    return response.json()['response'].strip()
+    return ask_llm(prompt)
 
 
+# 🧠 Generate SQL
 def generate_sql(question, table_name, columns):
     prompt = f"""
 You are an expert data analyst using SQLite.
@@ -64,8 +63,7 @@ STRICT RULES:
 - Output ONLY SQL
 - Use ONLY table: {table_name}
 - Use ONLY columns: {', '.join(columns)}
-- Column names are case-sensitive
-- Use EXACT column names
+- Column names are lowercase
 - SQL must start with SELECT and end with ;
 
 SQL RULES:
@@ -74,22 +72,16 @@ SQL RULES:
 
 Question:
 {question}
-
-SQL:
 """
 
-    response = requests.post(
-        OLLAMA_URL,
-        json={"model": MODEL, "prompt": prompt, "stream": False},
-        timeout=30
-    )
-
-    return clean_sql(response.json()['response'], table_name, columns)
+    response = ask_llm(prompt)
+    return clean_sql(response, table_name, columns)
 
 
+# 🔧 Fix broken SQL
 def fix_sql(bad_sql, error, table_name, columns):
     prompt = f"""
-Fix this SQL for SQLite:
+Fix this SQL query for SQLite:
 
 {bad_sql}
 
@@ -97,34 +89,24 @@ Error:
 {error}
 
 STRICT RULES:
-- Use SQLite syntax only
-- Use EXACT column names
+- Use correct column names
+- Use SQLite syntax
 - Return ONLY SQL
 
 Table: {table_name}
 Columns: {', '.join(columns)}
 """
 
-    response = requests.post(
-        OLLAMA_URL,
-        json={"model": MODEL, "prompt": prompt, "stream": False},
-        timeout=30
-    )
-
-    return clean_sql(response.json()['response'], table_name, columns)
+    response = ask_llm(prompt)
+    return clean_sql(response, table_name, columns)
 
 
+# 📊 Generate insights
 def generate_insight(df):
     prompt = f"""
-Analyze the data and give 2 concise business insights:
+Analyze this data and give 2 short business insights:
 
 {df.head(20).to_string()}
 """
 
-    response = requests.post(
-        OLLAMA_URL,
-        json={"model": MODEL, "prompt": prompt, "stream": False},
-        timeout=30
-    )
-
-    return response.json()['response']
+    return ask_llm(prompt)
