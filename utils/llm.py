@@ -23,11 +23,10 @@ def clean_sql(response, table_name, columns):
     return sql
 
 
-# 🔥 LLM call (FIXED)
 def ask_llm(prompt):
     try:
         response = client.chat.completions.create(
-            model="llama3-70b-8192",  # ✅ FIXED MODEL
+            model="mixtral-8x7b-32768",  # ✅ FINAL WORKING MODEL
             messages=[{"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content
