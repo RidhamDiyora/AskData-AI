@@ -14,6 +14,18 @@ def normalize_columns(df):
     return df
 
 
+# 🔥 NEW: Clean SQL output column names
+def clean_column_names(df):
+    df.columns = [
+        col.replace("(", "_")
+           .replace(")", "")
+           .replace(" ", "_")
+           .lower()
+        for col in df.columns
+    ]
+    return df
+
+
 def load_uploaded_data(file):
     df = pd.read_csv(file)
     df = normalize_columns(df)
@@ -30,4 +42,8 @@ def run_query(query):
     conn = sqlite3.connect(DB_PATH)
     df = pd.read_sql(query, conn)
     conn.close()
+
+    # ✅ APPLY CLEANING
+    df = clean_column_names(df)
+
     return df

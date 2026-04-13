@@ -49,16 +49,16 @@ def rewrite_question(question, history):
     context = "\n".join([m["content"] for m in history[-3:]])
 
     prompt = f"""
-Rewrite the user question into a clear standalone question.
+    Rewrite the user question into a clear standalone question.
 
-Conversation:
-{context}
+    Conversation:
+    {context}
 
-User question:
-{question}
+    User question:
+    {question}
 
-Return only the rewritten question.
-"""
+    Return only the rewritten question.
+    """
 
     return ask_llm(prompt)
 
@@ -66,24 +66,25 @@ Return only the rewritten question.
 # 🧠 Generate SQL
 def generate_sql(question, table_name, columns):
     prompt = f"""
-You are an expert data analyst using SQLite.
+    You are an expert data analyst using SQLite.
 
-Convert the question into SQL.
+    Convert the question into SQL.
 
-STRICT RULES:
-- Output ONLY SQL
-- Use ONLY table: {table_name}
-- Use ONLY columns: {', '.join(columns)}
-- Column names are lowercase
-- SQL must start with SELECT and end with ;
+    STRICT RULES:
+    - Output ONLY SQL
+    - Use ONLY table: {table_name}
+    - Use ONLY columns: {', '.join(columns)}
+    - Column names are lowercase
+    - SQL must start with SELECT and end with ;
+    - ALWAYS use column aliases (AS name)
 
-SQL RULES:
-- Use strftime('%Y', column_name) for year
-- DO NOT use EXTRACT()
+    SQL RULES:
+    - Use strftime('%Y', column_name) for year
+    - DO NOT use EXTRACT()
 
-Question:
-{question}
-"""
+    Question:
+    {question}
+    """
 
     response = ask_llm(prompt)
     return clean_sql(response, table_name, columns)
@@ -92,21 +93,21 @@ Question:
 # 🔧 Fix SQL
 def fix_sql(bad_sql, error, table_name, columns):
     prompt = f"""
-Fix this SQL query for SQLite:
+    Fix this SQL query for SQLite:
 
-{bad_sql}
+    {bad_sql}
 
-Error:
-{error}
+    Error:
+    {error}
 
-STRICT RULES:
-- Use correct column names
-- Use SQLite syntax
-- Return ONLY SQL
+    STRICT RULES:
+    - Use correct column names
+    - Use SQLite syntax
+    - Return ONLY SQL
 
-Table: {table_name}
-Columns: {', '.join(columns)}
-"""
+    Table: {table_name}
+    Columns: {', '.join(columns)}
+    """
 
     response = ask_llm(prompt)
     return clean_sql(response, table_name, columns)
