@@ -92,9 +92,3 @@ This project demonstrates:
 * Handling of unreliable AI outputs (production mindset)
 * End-to-end application development
 
----
-
-## 👤 Author
-
-**Ridham Diyora**
-🔗 GitHub: https://github.com/YOUR_USERNAME/askdata-ai
