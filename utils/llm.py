@@ -105,10 +105,39 @@ def fix_sql(bad_sql, error, table_name, columns):
 
 # 📊 Insights
 def generate_insight(df):
-    prompt = f"""
-Give 2 short insights from this data:
+    if df is None or df.empty:
+        return "No data available for insights."
 
-{df.head(10).to_string()}
-"""
+    # Get basic stats
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
+
+    summary = ""
+
+    # Add numeric summary
+    if numeric_cols:
+        summary += "\nNUMERIC SUMMARY:\n"
+        summary += df[numeric_cols].describe().to_string()
+
+    # Add categorical summary
+    if categorical_cols:
+        summary += "\n\nCATEGORICAL SAMPLE:\n"
+        for col in categorical_cols[:3]:
+            summary += f"\n{col}: {df[col].value_counts().head(5).to_string()}\n"
+
+    prompt = f"""
+        You are a data analyst.
+
+        Based ONLY on the summary below, give 2-3 clear, factual insights.
+
+        RULES:
+        - Do NOT assume anything not in data
+        - Be specific with numbers
+        - Keep it short and useful
+        - No generic statements
+
+        DATA SUMMARY:
+        {summary}
+        """
 
     return ask_llm(prompt)
