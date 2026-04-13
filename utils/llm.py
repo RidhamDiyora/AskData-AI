@@ -2,38 +2,41 @@ import re
 import os
 from groq import Groq
 
-# 🔥 Initialize Groq client
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-# ✅ Clean SQL (fix columns + enforce table)
+# ✅ Clean SQL
 def clean_sql(response, table_name, columns):
     response = response.strip()
 
     match = re.search(r"(SELECT .*?;)", response, re.IGNORECASE | re.DOTALL)
     sql = match.group(1).strip() if match else response.strip()
 
-    # Normalize column names (case fix)
+    # Normalize column names
     for col in columns:
         sql = re.sub(rf"\b{col}\b", col, sql, flags=re.IGNORECASE)
 
-    # Force correct table name
+    # Force table name
     sql = re.sub(r"\bFROM\s+\w+", f"FROM {table_name}", sql, flags=re.IGNORECASE)
     sql = re.sub(r"\bJOIN\s+\w+", f"JOIN {table_name}", sql, flags=re.IGNORECASE)
 
     return sql
 
 
-# 🔥 Generic LLM call
+# 🔥 LLM call (FIXED)
 def ask_llm(prompt):
-    response = client.chat.completions.create(
-        model="llama3-70b-8192",  # fast + powerful
-        messages=[{"role": "user", "content": prompt}]
-    )
-    return response.choices[0].message.content
+    try:
+        response = client.chat.completions.create(
+            model="llama3-8b-8192",  # ✅ FIXED model
+            messages=[{"role": "user", "content": prompt}]
+        )
+        return response.choices[0].message.content
+
+    except Exception as e:
+        return f"⚠️ LLM Error: {str(e)}"
 
 
-# 🧠 Rewrite vague questions (context-aware)
+# 🧠 Rewrite question
 def rewrite_question(question, history):
     context = "\n".join([m["content"] for m in history[-3:]])
 
@@ -78,7 +81,7 @@ Question:
     return clean_sql(response, table_name, columns)
 
 
-# 🔧 Fix broken SQL
+# 🔧 Fix SQL
 def fix_sql(bad_sql, error, table_name, columns):
     prompt = f"""
 Fix this SQL query for SQLite:
@@ -101,12 +104,12 @@ Columns: {', '.join(columns)}
     return clean_sql(response, table_name, columns)
 
 
-# 📊 Generate insights
+# 📊 Insights (FIXED prompt size)
 def generate_insight(df):
     prompt = f"""
 Analyze this data and give 2 short business insights:
 
-{df.head(20).to_string()}
+{df.head(10).to_string()}   # ✅ FIXED (reduced size)
 """
 
     return ask_llm(prompt)
