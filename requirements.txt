@@ -1,5 +1,5 @@
 streamlit
 pandas
 matplotlib
-requests
 groq
+python-dotenv
