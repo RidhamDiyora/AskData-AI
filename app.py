@@ -25,6 +25,7 @@ st.markdown("""
 
 # 🧠 Header
 st.title("🤖 AskData AI")
+st.info("⚠️ This is an AI-powered prototype. Results may vary.")
 st.caption("Chat with your data using AI-powered SQL analysis")
 
 # 📂 Sidebar
