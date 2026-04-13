@@ -24,15 +24,24 @@ def clean_sql(response, table_name, columns):
 
 
 def ask_llm(prompt):
-    try:
-        response = client.chat.completions.create(
-            model="mixtral-8x7b-32768",  # ✅ FINAL WORKING MODEL
-            messages=[{"role": "user", "content": prompt}]
-        )
-        return response.choices[0].message.content
+    models = [
+        "llama-3.1-70b-versatile",   # ✅ NEW stable
+        "llama-3.1-8b-instant",     # ✅ fallback
+    ]
 
-    except Exception as e:
-        return f"⚠️ LLM Error: {str(e)}"
+    for model in models:
+        try:
+            response = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            return response.choices[0].message.content
+
+        except Exception as e:
+            last_error = str(e)
+            continue
+
+    return f"⚠️ All models failed: {last_error}"
 
 
 # 🧠 Rewrite question
