@@ -5,28 +5,11 @@ from groq import Groq
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 
-# ✅ Clean SQL
-def clean_sql(response, table_name, columns):
-    response = response.strip()
-
-    match = re.search(r"(SELECT .*?;)", response, re.IGNORECASE | re.DOTALL)
-    sql = match.group(1).strip() if match else response.strip()
-
-    # Normalize column names
-    for col in columns:
-        sql = re.sub(rf"\b{col}\b", col, sql, flags=re.IGNORECASE)
-
-    # Force table name
-    sql = re.sub(r"\bFROM\s+\w+", f"FROM {table_name}", sql, flags=re.IGNORECASE)
-    sql = re.sub(r"\bJOIN\s+\w+", f"JOIN {table_name}", sql, flags=re.IGNORECASE)
-
-    return sql
-
-
+# 🔥 LLM call with fallback
 def ask_llm(prompt):
     models = [
-        "llama-3.1-70b-versatile",   # ✅ NEW stable
-        "llama-3.1-8b-instant",     # ✅ fallback
+        "llama-3.1-70b-versatile",
+        "llama-3.1-8b-instant"
     ]
 
     for model in models:
@@ -41,10 +24,25 @@ def ask_llm(prompt):
             last_error = str(e)
             continue
 
-    return f"⚠️ All models failed: {last_error}"
+    return f"⚠️ LLM Error: {last_error}"
 
 
-# 🧠 Rewrite question
+# ✅ Clean SQL
+def clean_sql(response, table_name, columns):
+    response = response.strip()
+
+    match = re.search(r"(SELECT .*?;)", response, re.IGNORECASE | re.DOTALL)
+    sql = match.group(1).strip() if match else response.strip()
+
+    for col in columns:
+        sql = re.sub(rf"\b{col}\b", col, sql, flags=re.IGNORECASE)
+
+    sql = re.sub(r"\bFROM\s+\w+", f"FROM {table_name}", sql, flags=re.IGNORECASE)
+
+    return sql
+
+
+# 🧠 Rewrite question (FIXED — no requests)
 def rewrite_question(question, history):
     context = "\n".join([m["content"] for m in history[-3:]])
 
@@ -70,17 +68,15 @@ def generate_sql(question, table_name, columns):
 
     Convert the question into SQL.
 
-    STRICT RULES:
-    - Output ONLY SQL
-    - Use ONLY table: {table_name}
-    - Use ONLY columns: {', '.join(columns)}
-    - Column names are lowercase
-    - SQL must start with SELECT and end with ;
-    - ALWAYS use column aliases (AS name)
-
-    SQL RULES:
-    - Use strftime('%Y', column_name) for year
-    - DO NOT use EXTRACT()
+    RULES:
+    - Only return SQL
+    - Use table: {table_name}
+    - Use columns: {', '.join(columns)}
+    - Avoid SELECT *
+    - Use aggregation for large data
+    - Always use aliases
+    - Use SQLite syntax only
+    - Use strftime('%Y', column) for year
 
     Question:
     {question}
@@ -93,32 +89,26 @@ def generate_sql(question, table_name, columns):
 # 🔧 Fix SQL
 def fix_sql(bad_sql, error, table_name, columns):
     prompt = f"""
-    Fix this SQL query for SQLite:
+    Fix this SQL query:
 
     {bad_sql}
 
     Error:
     {error}
 
-    STRICT RULES:
-    - Use correct column names
-    - Use SQLite syntax
-    - Return ONLY SQL
-
-    Table: {table_name}
-    Columns: {', '.join(columns)}
+    Return only corrected SQL.
     """
 
     response = ask_llm(prompt)
     return clean_sql(response, table_name, columns)
 
 
-# 📊 Insights (FIXED prompt size)
+# 📊 Insights
 def generate_insight(df):
     prompt = f"""
-Analyze this data and give 2 short business insights:
+Give 2 short insights from this data:
 
-{df.head(10).to_string()}   # ✅ FIXED (reduced size)
+{df.head(10).to_string()}
 """
 
     return ask_llm(prompt)
